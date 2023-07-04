@@ -23,16 +23,13 @@ public class UserInfoService implements IUserInfoService {
     public int insertUserInfo(UserInfoDTO pDTO) throws Exception {
 
         log.info(this.getClass().getName() + ".insertUserInfo Start!");
+
         // 회원가입 성공 : 1, 기타 에러 발생 : 0
         int res = 0;
+
         // 회원가입
-        int success = userInfoMapper.insertUserInfo(pDTO);
-        // db에 데이터가 등록되었다면(회원가입 성공했다면....
-        if (success > 0) {
-            res = 1;
-        } else {
-            res = 0;
-        }
+        res = userInfoMapper.insertUserInfo(pDTO);
+
         log.info(this.getClass().getName() + ".insertUserInfo End!");
 
         return res;
@@ -60,6 +57,26 @@ public class UserInfoService implements IUserInfoService {
         log.info(this.getClass().getName() + ".getLogin End!");
 
         return rDTO;
+    }
+
+    @Override
+    public UserInfoDTO searchUserIdOrPasswordProc(UserInfoDTO pDTO) throws Exception {
+        return null;
+    }
+
+    @Override
+    public int newPasswordProc(UserInfoDTO pDTO) throws Exception {
+        return 0;
+    }
+
+    @Override
+    public UserInfoDTO getUserIdExists(UserInfoDTO pDTO) throws Exception {
+        return null;
+    }
+
+    @Override
+    public UserInfoDTO getEmailExists(UserInfoDTO pDTO) throws Exception {
+        return null;
     }
 
 }
