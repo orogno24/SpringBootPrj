@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -67,13 +68,6 @@ public class UserInfoController {
             String email = CmmUtil.nvl(request.getParameter("email")); //이메일
             String addr1 = CmmUtil.nvl(request.getParameter("addr1")); //주소
             String addr2 = CmmUtil.nvl(request.getParameter("addr2")); //상세주소
-            /*
-             * #######################################################
-             *        웹(회원정보 입력화면)에서 받는 정보를 String 변수에 저장 끝!!
-             *
-             *    무조건 웹으로 받은 정보는 DTO에 저장하기 위해 임시로 String 변수에 저장함
-             * #######################################################
-             */
 
             /*
              * #######################################################
@@ -154,52 +148,72 @@ public class UserInfoController {
     /**
      * 로그인을 위한 입력 화면으로 이동
      */
-    @GetMapping(value = "/user/userLoginForm")
+    @GetMapping(value = "/user/login")
     public String login() {
-        log.info(this.getClass().getName() + ".userLoginForm Start!");
-        return "/user/userLoginForm";
+        log.info(this.getClass().getName() + ".user/login Start!");
+        log.info(this.getClass().getName() + ".user/login End!");
+        return "/user/login";
     }
 
+    /**
+     * 로그인 처리 및 결과 알려주는 화면으로 이동
+     */
+    @PostMapping(value = "/user/loginProc")
+    public String loginProc(HttpServletRequest request, ModelMap model, HttpSession session) {
 
-    @PostMapping("/user/userLoginProc")
-    public String userLoginProc(HttpServletRequest request, ModelMap model) throws Exception {
-        log.info(this.getClass().getName() + ".userLoginProc Start!");
+        log.info(this.getClass().getName() + "loginProc Start!");
 
-        String msg=""; //로그인 결과 메시지를 저장 및 전달할 변수 (로그인 성공 : 1, 아이디, 비밀번호 불일치로인한 실패 : 0, 시스템 에러 : 2)
+        String msg = ""; //로그인 결과에 대한 메시지를 전달할 함수
+        String url = "";
+        //웹(회원정보 입력화면)에서 받는 정보를 저장할 함수
 
-        //웹(회원정보 입력화면)에서 받는 정보를 저장할 변수
         UserInfoDTO pDTO = null;
 
         try {
 
-            String userId = CmmUtil.nvl(request.getParameter("userId")); //아이디
+            String user_id = CmmUtil.nvl(request.getParameter("user_id")); //아이디
             String password = CmmUtil.nvl(request.getParameter("password")); //비밀번호
 
-            log.info("userId : " + userId);
+            log.info("user_id : " + user_id);
             log.info("password : " + password);
 
             //웹(회원정보 입력화면)에서 받는 정보를 저장할 변수를 메모리에 올리기
             pDTO = new UserInfoDTO();
 
-            pDTO.setUser_id(userId);
+            pDTO.setUser_id(user_id);
 
-            //비밀번호는 절대로 복호화되지 않도록 해시 알고리즘으로 암호화함
+            //비밀번호는 절대로 복호화되지 않도록 알고리즘으로 암호화함
             pDTO.setPassword(EncryptUtil.encHashSHA256(password));
-
             // 로그인을 위해 아이디와 비밀번호가 일치하는지 확인하기 위한 userInfoService 호출하기
             UserInfoDTO rDTO = userInfoService.getLogin(pDTO);
-
             /*
-             * 로그인을 성공했다면, 회원 정보를 modelmap 객체에 저장함
-             * */
-            if (CmmUtil.nvl(rDTO.getUser_id()).length() > 0) { //로그인 성공
-                msg = "로그인이 성공했습니다.";
-                model.addAttribute("userName", rDTO.getUser_name());
+             * 로그인을 성공했따면, 회원아이디 정보를 session에 저장함
+             *
+             * 세션은 톰켓(was)의 메모리에 존재하며, 웹사이트에 접속한 사람(연결된 객체)마다 메모리에 값을 올린다.
+             *
+             * 예) 톰켓에 100명의 사용자가 로그인했다면, 사용자 각각 회원아이디를 메모리에 저장하며,
+             * 메모리에 저장된 객체의 수는 100개이다.
+             * 따라서 과도한 세션은 톰켓의 메모리 부하를 발생시켜 서버가 다운되는 현상이 있을 수 있기때문에,
+             * 최소한으로 사용하는 것을 권장한다.
+             *
+             * 스프링에서 세션을 사용하기 위해서는 함수명의 파라미터에 HttpSession session 존재해야 한다.
+             * 세션은 톰켓의 메모리에 저장되기 때문에 url마다 전달하는게 필요하지 않고.
+             * 그냥 메모리에서 부르면 되기 대문에 화면, controller에서 쉽게 불러서 쓸수 있다.
+             */
+            if (CmmUtil.nvl(rDTO.getUser_id()).length() > 0) {
+            /*
+             * 세션에 회원아이디 저장하기, 추후 로그인여부를 체크하기 위해 세션에 값이 존재하는지 체크한다.
+             * 일반적으로 세션에 저장되는 키는 대문자로 입력하며, 앞에 SS를 붙ㅇ딘다.
+             *
+             * Session 단어에서 SS를 가져온 것이다.
+             */
+                session.setAttribute("SS_USER_ID", user_id);
+                session.setAttribute("SS_USER_NAME", CmmUtil.nvl(rDTO.getUser_name()));
 
-            } else {
-                msg = "아이디와 비밀번호가 올바르지 않습니다.";
+                //로그인 성공 메세지와 이동할 경로의 url
+                msg = "로그인이 성공했습니다. \n" + rDTO.getUser_name() + "님 환영합니다.";
+                url = "/main";
             }
-
         } catch (Exception e) {
             //저장이 실패되면 사용자에게 보여줄 메시지
             msg = "시스템 문제로 로그인이 실패했습니다.";
@@ -208,12 +222,73 @@ public class UserInfoController {
 
         } finally {
             model.addAttribute("msg", msg);
+            model.addAttribute("url", url);
+
             log.info(this.getClass().getName() + ".loginProc End!");
         }
 
-        log.info(this.getClass().getName() + ".userLoginProc End!");
-        return "/main";
+        return "/redirect";
     }
+
+
+
+
+
+
+
+//    @PostMapping("/user/userLoginProc")
+//    public String userLoginProc(HttpServletRequest request, ModelMap model) throws Exception {
+//        log.info(this.getClass().getName() + ".userLoginProc Start!");
+//
+//        String msg=""; //로그인 결과 메시지를 저장 및 전달할 변수 (로그인 성공 : 1, 아이디, 비밀번호 불일치로인한 실패 : 0, 시스템 에러 : 2)
+//
+//        //웹(회원정보 입력화면)에서 받는 정보를 저장할 변수
+//        UserInfoDTO pDTO = null;
+//
+//        try {
+//
+//            String userId = CmmUtil.nvl(request.getParameter("userId")); //아이디
+//            String password = CmmUtil.nvl(request.getParameter("password")); //비밀번호
+//
+//            log.info("userId : " + userId);
+//            log.info("password : " + password);
+//
+//            //웹(회원정보 입력화면)에서 받는 정보를 저장할 변수를 메모리에 올리기
+//            pDTO = new UserInfoDTO();
+//
+//            pDTO.setUser_id(userId);
+//
+//            //비밀번호는 절대로 복호화되지 않도록 해시 알고리즘으로 암호화함
+//            pDTO.setPassword(EncryptUtil.encHashSHA256(password));
+//
+//            // 로그인을 위해 아이디와 비밀번호가 일치하는지 확인하기 위한 userInfoService 호출하기
+//            UserInfoDTO rDTO = userInfoService.getLogin(pDTO);
+//
+//            /*
+//             * 로그인을 성공했다면, 회원 정보를 modelmap 객체에 저장함
+//             * */
+//            if (CmmUtil.nvl(rDTO.getUser_id()).length() > 0) { //로그인 성공
+//                msg = "로그인이 성공했습니다.";
+//                model.addAttribute("userName", rDTO.getUser_name());
+//
+//            } else {
+//                msg = "아이디와 비밀번호가 올바르지 않습니다.";
+//            }
+//
+//        } catch (Exception e) {
+//            //저장이 실패되면 사용자에게 보여줄 메시지
+//            msg = "시스템 문제로 로그인이 실패했습니다.";
+//            log.info(e.toString());
+//            e.printStackTrace();
+//
+//        } finally {
+//            model.addAttribute("msg", msg);
+//            log.info(this.getClass().getName() + ".loginProc End!");
+//        }
+//
+//        log.info(this.getClass().getName() + ".userLoginProc End!");
+//        return "/main";
+//    }
 
 
 }
