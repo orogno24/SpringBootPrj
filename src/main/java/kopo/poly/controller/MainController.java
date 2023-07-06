@@ -23,7 +23,6 @@ public class MainController {
         log.info(this.getClass().getName() + ".test 함수 실행");
         return "/test";
     }
-
     @GetMapping("/url")
     public String url() throws Exception {
         log.info(this.getClass().getName() + ".index Start!");
