@@ -213,7 +213,7 @@ public class UserInfoController {
 
                 //로그인 성공 메세지와 이동할 경로의 url
                 msg = "로그인이 성공했습니다. \n" + rDTO.getUser_name() + "님 환영합니다.";
-                url = "/notice/noticeList";
+                url = "/main";
             } else{
                 msg = "로그인이 실패했습니다.";
                 url = "/user/login";
